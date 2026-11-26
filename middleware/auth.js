@@ -34,8 +34,14 @@ const verifyToken = (req, res, next) => {
 
   // 1. Check Authorization header
   const authHeader = req.headers.authorization || req.headers['authorization'];
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7).trim();
+  if (authHeader) {
+    // Postman users sometimes paste "Bearer <token>" into the Bearer Token
+    // field, which adds a second Bearer prefix. Strip repeated prefixes while
+    // still requiring a Bearer authorization scheme.
+    const match = authHeader.trim().match(/^(?:Bearer\s+)+(.+)$/i);
+    if (match) {
+      token = match[1].trim().replace(/^(['"])(.*)\1$/, '$2').trim();
+    }
   }
 
   // 2. Fallback to cookie "token" (parsed manually)
