@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secure Connect Chat</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      padding: 24px;
+    }
+    .container {
+      width: 100%;
+      max-width: 760px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #1e293b;
+      color: #fff;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { font-size: 18px; font-weight: 600; }
+    .badge {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: #334155;
+    }
+    .badge.connected { background: #16a34a; }
+    .badge.disconnected { background: #dc2626; }
+    .card-body { padding: 20px; }
+    .form-group {
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .form-row {
+      display: flex;
+      gap: 10px;
+    }
+    .form-row .form-group { flex: 1; }
+    label { font-size: 13px; font-weight: 500; color: #475569; }
+    input[type="text"], input[type="email"], input[type="password"] {
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus {
+      border-color: #2563eb;
+    }
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      background: #2563eb;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button:hover { background: #1d4ed8; }
+    button.secondary {
+      background: #64748b;
+    }
+    button.secondary:hover { background: #475569; }
+    button.danger {
+      background: #dc2626;
+    }
+    button.danger:hover { background: #b91c1c; }
+    .alert {
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .alert.error { background: #fee2e2; color: #991b1b; display: block; }
+    .alert.success { background: #dcfce7; color: #166534; display: block; }
+    #chat-section { display: none; flex-direction: column; }
+    .room-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 16px;
+    }
+    .room-bar input { flex: 1; }
+    .active-users-bar {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 12px;
+    }
+    .messages-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      height: 360px;
+      overflow-y: auto;
+      padding: 14px;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .message-item {
+      display: flex;
+      flex-direction: column;
+      max-width: 80%;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #e2e8f0;
+      align-self: flex-start;
+    }
+    .message-item.self {
+      background: #dbeafe;
+      align-self: flex-end;
+    }
+    .message-meta {
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 2px;
+      display: flex;
+      gap: 8px;
+    }
+    .message-item.self .message-meta {
+      color: #1e40af;
+    }
+    .message-body {
+      word-break: break-word;
+    }
+    .system-msg {
+      align-self: center;
+      font-size: 12px;
+      color: #64748b;
+      font-style: italic;
+      padding: 4px 8px;
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    .input-bar {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .input-bar input { flex: 1; }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+    .tab-btn {
+      background: transparent;
+      color: #64748b;
+      padding: 6px 12px;
+    }
+    .tab-btn.active {
+      color: #2563eb;
+      font-weight: 600;
+      border-bottom: 2px solid #2563eb;
+      border-radius: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Secure Connect Platform</h1>
+      <span id="connection-status" class="badge disconnected">Disconnected</span>
+    </header>
+
+    <div class="card-body">
+      <!-- Auth Section -->
+      <div id="auth-section">
+        <div class="tabs">
+          <button id="tab-login-btn" class="tab-btn active" type="button">Login</button>
+          <button id="tab-signup-btn" class="tab-btn" type="button">Sign Up</button>
+        </div>
+
+        <div id="auth-alert" class="alert"></div>
+
+        <!-- Login Form -->
+        <form id="login-form">
+          <div class="form-group">
+            <label for="login-email">Email Address</label>
+            <input type="email" id="login-email" required placeholder="user@example.com">
+          </div>
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" required placeholder="••••••">
+          </div>
+          <button type="submit" style="width: 100%; margin-top: 8px;">Login to Chat</button>
+        </form>
+
+        <!-- Signup Form -->
+        <form id="signup-form" style="display: none;">
+          <div class="form-group">
+            <label for="signup-username">Username</label>
+            <input type="text" id="signup-username" required placeholder="alice">
+          </div>
+          <div class="form-group">
+            <label for="signup-email">Email Address</label>
+            <input type="email" id="signup-email" required placeholder="alice@example.com">
+          </div>
+          <div class="form-group">
+            <label for="signup-password">Password (min 6 chars)</label>
+            <input type="password" id="signup-password" required minlength="6" placeholder="••••••">
+          </div>
+          <button type="submit" style="width: 100%; margin-top: 8px;">Create Account</button>
+        </form>
+      </div>
+
+      <!-- Chat Section -->
+      <div id="chat-section">
+        <div class="room-bar">
+          <input type="text" id="room-input" value="general" placeholder="Enter room name...">
+          <button id="join-room-btn" type="button">Join Room</button>
+          <button id="leave-room-btn" type="button" class="secondary">Leave Room</button>
+          <button id="logout-btn" type="button" class="danger">Logout</button>
+        </div>
+
+        <div class="active-users-bar" id="active-users-bar">
+          Room: <strong id="current-room-name">general</strong> | Active users: <span id="room-users-list">None</span>
+        </div>
+
+        <div class="messages-box" id="messages-box"></div>
+
+        <form id="message-form" class="input-bar">
+          <input type="text" id="message-input" autocomplete="off" placeholder="Type a message..." required>
+          <button type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let token = localStorage.getItem('token') || '';
+    let currentUsername = localStorage.getItem('username') || '';
+    let currentRoom = 'general';
+    let socket = null;
+
+    const authSection = document.getElementById('auth-section');
+    const chatSection = document.getElementById('chat-section');
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+    const authAlert = document.getElementById('auth-alert');
+    const statusBadge = document.getElementById('connection-status');
+    const messagesBox = document.getElementById('messages-box');
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const roomInput = document.getElementById('room-input');
+    const joinRoomBtn = document.getElementById('join-room-btn');
+    const leaveRoomBtn = document.getElementById('leave-room-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const currentRoomNameEl = document.getElementById('current-room-name');
+    const roomUsersListEl = document.getElementById('room-users-list');
+
+    // Tab switching
+    document.getElementById('tab-login-btn').addEventListener('click', () => {
+      document.getElementById('tab-login-btn').classList.add('active');
+      document.getElementById('tab-signup-btn').classList.remove('active');
+      loginForm.style.display = 'block';
+      signupForm.style.display = 'none';
+      showAlert('', '');
+    });
+
+    document.getElementById('tab-signup-btn').addEventListener('click', () => {
+      document.getElementById('tab-signup-btn').classList.add('active');
+      document.getElementById('tab-login-btn').classList.remove('active');
+      signupForm.style.display = 'block';
+      loginForm.style.display = 'none';
+      showAlert('', '');
+    });
+
+    function showAlert(text, type) {
+      if (!text) {
+        authAlert.className = 'alert';
+        authAlert.textContent = '';
+        return;
+      }
+      authAlert.className = 'alert ' + type;
+      authAlert.textContent = text;
+    }
+
+    // Signup submission
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('signup-username').value.trim();
+      const email = document.getElementById('signup-email').value.trim();
+      const password = document.getElementById('signup-password').value;
+
+      try {
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password })
+        });
+        const data = await res.json();
+        if (res.status === 201) {
+          showAlert('Registration successful! Please login.', 'success');
+          document.getElementById('tab-login-btn').click();
+          document.getElementById('login-email').value = email;
+        } else {
+          showAlert(data.message || 'Signup failed', 'error');
+        }
+      } catch (err) {
+        showAlert('Network error: ' + err.message, 'error');
+      }
+    });
+
+    // Login submission
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.status === 200 && data.token) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          // Fetch user profile to get username
+          await fetchProfileAndConnect();
+        } else {
+          showAlert(data.message || 'Login failed', 'error');
+        }
+      } catch (err) {
+        showAlert('Network error: ' + err.message, 'error');
+      }
+    });
+
+    async function fetchProfileAndConnect() {
+      try {
+        const res = await fetch('/api/profile', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.ok) {
+          const profile = await res.json();
+          currentUsername = profile.username;
+          localStorage.setItem('username', currentUsername);
+          showChatUI();
+          connectSocket();
+        } else {
+          handleLogout();
+        }
+      } catch (e) {
+        showChatUI();
+        connectSocket();
+      }
+    }
+
+    function showChatUI() {
+      authSection.style.display = 'none';
+      chatSection.style.display = 'flex';
+      currentRoomNameEl.textContent = currentRoom;
+    }
+
+    function connectSocket() {
+      if (socket) {
+        socket.disconnect();
+      }
+
+      // Connect using io({ auth: { token } })
+      socket = io({
+        auth: { token }
+      });
+
+      socket.on('connect', () => {
+        statusBadge.textContent = 'Connected (' + (currentUsername || 'User') + ')';
+        statusBadge.className = 'badge connected';
+        // Join initial room
+        socket.emit('joinRoom', currentRoom);
+      });
+
+      socket.on('connect_error', (err) => {
+        statusBadge.textContent = 'Auth Error';
+        statusBadge.className = 'badge disconnected';
+        appendSystemMessage('Socket authentication error: ' + err.message);
+      });
+
+      socket.on('disconnect', () => {
+        statusBadge.textContent = 'Disconnected';
+        statusBadge.className = 'badge disconnected';
+      });
+
+      // Handle message history from room
+      socket.on('messageHistory', (messages) => {
+        messagesBox.innerHTML = '';
+        messages.forEach(msg => appendMessage(msg));
+      });
+
+      // Handle real-time chat messages
+      socket.on('message', (msg) => {
+        appendMessage(msg);
+      });
+
+      // Handle system notices
+      socket.on('systemMessage', (sysMsg) => {
+        appendSystemMessage(sysMsg.text);
+      });
+
+      // Handle active room users
+      socket.on('roomUsers', ({ room, users }) => {
+        if (room === currentRoom) {
+          roomUsersListEl.textContent = users.join(', ') || 'None';
+        }
+      });
+    }
+
+    function appendMessage(msg) {
+      const isSelf = msg.username === currentUsername;
+      const item = document.createElement('div');
+      item.className = 'message-item' + (isSelf ? ' self' : '');
+
+      const meta = document.createElement('div');
+      meta.className = 'message-meta';
+      const timeStr = msg.time ? new Date(msg.time).toLocaleTimeString() : '';
+      meta.textContent = msg.username + ' • ' + timeStr;
+
+      const body = document.createElement('div');
+      body.className = 'message-body';
+      body.textContent = msg.text;
+
+      item.appendChild(meta);
+      item.appendChild(body);
+      messagesBox.appendChild(item);
+      messagesBox.scrollTop = messagesBox.scrollHeight;
+    }
+
+    function appendSystemMessage(text) {
+      const item = document.createElement('div');
+      item.className = 'system-msg';
+      item.textContent = text;
+      messagesBox.appendChild(item);
+      messagesBox.scrollTop = messagesBox.scrollHeight;
+    }
+
+    // Send Message
+    messageForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      if (!text || !socket) return;
+      socket.emit('chatMessage', { room: currentRoom, text });
+      messageInput.value = '';
+    });
+
+    // Join Room
+    joinRoomBtn.addEventListener('click', () => {
+      const newRoom = roomInput.value.trim() || 'general';
+      if (socket && newRoom !== currentRoom) {
+        socket.emit('leaveRoom', currentRoom);
+        currentRoom = newRoom;
+        currentRoomNameEl.textContent = currentRoom;
+        socket.emit('joinRoom', currentRoom);
+      }
+    });
+
+    // Leave Room
+    leaveRoomBtn.addEventListener('click', () => {
+      if (socket && currentRoom) {
+        socket.emit('leaveRoom', currentRoom);
+        appendSystemMessage('Left room: ' + currentRoom);
+        currentRoom = '';
+        currentRoomNameEl.textContent = 'None';
+        roomUsersListEl.textContent = 'None';
+      }
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', handleLogout);
+
+    async function handleLogout() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (e) {}
+      if (socket) socket.disconnect();
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      token = '';
+      currentUsername = '';
+      statusBadge.textContent = 'Disconnected';
+      statusBadge.className = 'badge disconnected';
+      chatSection.style.display = 'none';
+      authSection.style.display = 'block';
+      showAlert('You have been logged out.', 'success');
+    }
+
+    // Auto-login on reload if token exists
+    if (token) {
+      fetchProfileAndConnect();
+    }
+  </script>
+</body>
+</html>

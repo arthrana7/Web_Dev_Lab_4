@@ -1,0 +1,96 @@
+### Environment Variables
+@baseUrl = http://localhost:5000
+@authToken = {{login.response.body.token}}
+
+### 1. User Signup - Create First User (Aditi)
+# @name signupUser1
+POST {{baseUrl}}/api/auth/signup
+Content-Type: application/json
+
+{
+  "username": "aditi",
+  "email": "aditi@example.com",
+  "password": "Password123"
+}
+
+### 2. User Signup - Create Second User (Rohan)
+# @name signupUser2
+POST {{baseUrl}}/api/auth/signup
+Content-Type: application/json
+
+{
+  "username": "rohan",
+  "email": "rohan@example.com",
+  "password": "Password123"
+}
+
+### 3. User Login (Aditi)
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "aditi@example.com",
+  "password": "Password123"
+}
+
+### 4. Get Current Profile (Protected with Token)
+GET {{baseUrl}}/api/profile
+Authorization: Bearer {{authToken}}
+
+### 5. Access Notes Without Token (Expect 403 Forbidden)
+GET {{baseUrl}}/api/notes
+
+### 6. Create Note 1 (Aditi)
+# @name createNote1
+POST {{baseUrl}}/api/notes
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "title": "Backend Architecture Plan",
+  "content": "Implement JWT authentication, manual cookie parser, and socket.io chat."
+}
+
+### 7. Create Note 2 (Aditi)
+# @name createNote2
+POST {{baseUrl}}/api/notes
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "title": "Database Schema Review",
+  "content": "Verify User, Note, and Message models in MongoDB."
+}
+
+### 8. Get All Notes for Current User (Expect 200 with 2 notes)
+GET {{baseUrl}}/api/notes
+Authorization: Bearer {{authToken}}
+
+### 9. Get Single Note by ID (Replace with created note ID)
+@noteId = {{createNote1.response.body._id}}
+GET {{baseUrl}}/api/notes/{{noteId}}
+Authorization: Bearer {{authToken}}
+
+### 10. Update Note by ID (Owner Only)
+PUT {{baseUrl}}/api/notes/{{noteId}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "title": "Backend Architecture Plan (Updated)",
+  "content": "Completed JWT and Socket.io integration. Ready for deployment."
+}
+
+### 11. Delete Note by ID (Owner Only)
+DELETE {{baseUrl}}/api/notes/{{noteId}}
+Authorization: Bearer {{authToken}}
+
+### 12. User Logout (Clears httpOnly cookie)
+POST {{baseUrl}}/api/auth/logout
+Authorization: Bearer {{authToken}}
+
+### 13. Admin Endpoint - List All Users (Requires admin role)
+# Note: Run `node scripts/makeAdmin.js aditi@example.com` before testing this endpoint
+GET {{baseUrl}}/api/admin/users
+Authorization: Bearer {{authToken}}
